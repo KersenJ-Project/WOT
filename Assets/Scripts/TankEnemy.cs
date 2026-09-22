@@ -18,6 +18,8 @@ public class TankEnemy : MonoBehaviour
     public float delaiEntreTirs = 2f;
     private float chronoTir = 0f;
 
+    public GameObject prefabExplosion;
+
     private int indexPointActuel = 0;
 
     void Update()
@@ -122,9 +124,14 @@ public class TankEnemy : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, rayonDetection);
     }
 
-    // Prévient le gestionnaire UI quand ce tank ennemi est détruit (par un missile, etc.)
+    // Prévient le gestionnaire UI et déclenche l'explosion quand ce tank ennemi est détruit
     private void OnDestroy()
     {
+        if (prefabExplosion != null)
+        {
+            Instantiate(prefabExplosion, transform.position, Quaternion.identity);
+        }
+
         if (GestionnaireUI.instance != null)
         {
             GestionnaireUI.instance.EnnemiDetruit();

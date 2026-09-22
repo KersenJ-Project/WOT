@@ -28,6 +28,7 @@ public class Missile : MonoBehaviour
 
     private void GérerImpact(GameObject cible, Vector3 pointImpact)
     {
+        // Cas 1 : la cible est une Tilemap (destruction du block précis)
         Tilemap tilemap = cible.GetComponent<Tilemap>();
         if (tilemap != null && cible.CompareTag("Obstacle"))
         {
@@ -37,10 +38,24 @@ public class Missile : MonoBehaviour
             return;
         }
 
+        // Cas 2 : la cible est un ennemi
         if (cible.CompareTag("Enemy"))
         {
             Destroy(cible);
             Destroy(gameObject);
+            return;
+        }
+
+        // Cas 3 : la cible est le joueur (missile ennemi qui touche le tank joueur)
+        if (cible.CompareTag("Player"))
+        {
+            MouvementTank joueur = cible.GetComponent<MouvementTank>();
+            if (joueur != null)
+            {
+                joueur.SubirDegats(1);
+            }
+            Destroy(gameObject);
+            return;
         }
     }
 }

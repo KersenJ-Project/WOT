@@ -2,18 +2,32 @@ using UnityEngine;
 
 public class MouvementTank : MonoBehaviour
 {
-    [Header("Déplacement")]
     public float vitesse = 5f;
     public float vitesseRotation = 120f;
 
-    [Header("Missile")]
     public GameObject missilePrefab;
     public Transform pointTir;
     public float delaiEntreTirs = 0.7f;
     private float chronoTir = 0f;
 
-    [Header("Munitions")]
     public int nombreMissiles = 3;
+
+    public int vieMax = 5;
+    private int vieActuelle;
+
+    public GameObject prefabExplosion;
+
+    void Start()
+    {
+        vieActuelle = vieMax;
+
+        // Affiche les valeurs de départ dès le lancement de la partie
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.MettreAJourMissiles(nombreMissiles);
+            GestionnaireUI.instance.MettreAJourVie(vieActuelle);
+        }
+    }
 
     void Update()
     {
@@ -66,11 +80,51 @@ public class MouvementTank : MonoBehaviour
         }
 
         nombreMissiles--;
+
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.MettreAJourMissiles(nombreMissiles);
+        }
     }
 
     // Appelée par MissileCollectible quand le joueur ramasse un pickup
     public void AjouterMissiles(int quantite)
     {
         nombreMissiles += quantite;
+
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.MettreAJourMissiles(nombreMissiles);
+        }
+    }
+
+    // Appelée par Missile.cs quand un missile ennemi touche le joueur
+    public void SubirDegats(int degats)
+    {
+        vieActuelle -= degats;
+        if (vieActuelle < 0) vieActuelle = 0;
+
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.MettreAJourVie(vieActuelle);
+        }
+
+        if (vieActuelle <= 0)
+        {
+            Mourir();
+        }
+    }
+
+    private void Mourir()
+    {
+        Debug.Log("Le joueur est mort !");
+
+        if (prefabExplosion != null)
+        {
+            Instantiate(prefabExplosion, transform.position, Quaternion.identity);
+        }
+
+        // Détruit complètement le tank joueur. Remplaçable plus tard par un écran Game Over.
+        Destroy(gameObject);
     }
 }
