@@ -12,14 +12,37 @@ public class MouvementTank : MonoBehaviour
 
     public int nombreMissiles = 3;
 
+    public bool tirDouble = false;
+    public float ecartTirDouble = 0.3f;
+
     public int vieMax = 5;
     private int vieActuelle;
 
     public GameObject prefabExplosion;
 
+    public string tagEnnemi = "Enemy";
+    public float forceRebond = 1f;
+
     void Start()
     {
-        vieActuelle = vieMax;
+        // Place le tank à la position de la porte de spawn du niveau
+        if (GestionnaireUI.instance != null)
+        {
+            transform.position = GestionnaireUI.instance.ObtenirPositionSpawn();
+        }
+
+        // Si on arrive d'un niveau précédent (GestionnaireJeu a des valeurs sauvegardées),
+        // on reprend la vie et les missiles de fin de niveau précédent (+3 missiles déjà inclus)
+        if (GestionnaireJeu.instance != null && GestionnaireJeu.instance.vieSauvegardee >= 0)
+        {
+            vieActuelle = GestionnaireJeu.instance.vieSauvegardee;
+            nombreMissiles = GestionnaireJeu.instance.missilesSauvegardes;
+        }
+        else
+        {
+            // Premier niveau : valeurs par défaut définies dans l'Inspector
+            vieActuelle = vieMax;
+        }
 
         // Affiche les valeurs de départ dès le lancement de la partie
         if (GestionnaireUI.instance != null)
@@ -65,9 +88,30 @@ public class MouvementTank : MonoBehaviour
             return;
         }
 
+        if (tirDouble)
+        {
+            // Deux missiles décalés de part et d'autre du point de tir
+            InstancierMissile(pointTir.position + transform.right * ecartTirDouble);
+            InstancierMissile(pointTir.position - transform.right * ecartTirDouble);
+        }
+        else
+        {
+            InstancierMissile(pointTir.position);
+        }
+
+        nombreMissiles--;
+
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.MettreAJourMissiles(nombreMissiles);
+        }
+    }
+
+    private void InstancierMissile(Vector3 position)
+    {
         GameObject missileObj = Instantiate(
             missilePrefab,
-            pointTir.position,
+            position,
             pointTir.rotation
         );
 
@@ -78,13 +122,12 @@ public class MouvementTank : MonoBehaviour
         {
             Physics2D.IgnoreCollision(colliderMissile, monCollider);
         }
+    }
 
-        nombreMissiles--;
-
-        if (GestionnaireUI.instance != null)
-        {
-            GestionnaireUI.instance.MettreAJourMissiles(nombreMissiles);
-        }
+    // Appelée par TirDoubleCollectible quand le joueur ramasse ce pickup
+    public void ActiverTirDouble()
+    {
+        tirDouble = true;
     }
 
     // Appelée par MissileCollectible quand le joueur ramasse un pickup
@@ -115,6 +158,18 @@ public class MouvementTank : MonoBehaviour
         }
     }
 
+    // Appelée par CoeurCollectible quand le joueur ramasse un cœur
+    public void Soigner(int quantite)
+    {
+        vieActuelle += quantite;
+        if (vieActuelle > vieMax) vieActuelle = vieMax;
+
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.MettreAJourVie(vieActuelle);
+        }
+    }
+
     private void Mourir()
     {
         Debug.Log("Le joueur est mort !");
@@ -124,7 +179,44 @@ public class MouvementTank : MonoBehaviour
             Instantiate(prefabExplosion, transform.position, Quaternion.identity);
         }
 
-        // Détruit complètement le tank joueur. Remplaçable plus tard par un écran Game Over.
+        if (GestionnaireUI.instance != null)
+        {
+            GestionnaireUI.instance.AfficherGameOver();
+        }
+
+        // Détruit complètement le tank joueur
         Destroy(gameObject);
+    }
+
+    // Utilisées par PorteSortie pour sauvegarder les stats avant de changer de niveau
+    public int ObtenirVie()
+    {
+        return vieActuelle;
+    }
+
+    public int ObtenirMissiles()
+    {
+        return nombreMissiles;
+    }
+
+    // Rebond instantané au premier contact avec un ennemi (collider en Is Trigger)
+    private void OnTriggerEnter2D(Collider2D autre)
+    {
+        if (autre.CompareTag(tagEnnemi))
+        {
+            Vector2 directionRebond = (transform.position - autre.transform.position).normalized;
+            transform.position += (Vector3)(directionRebond * forceRebond);
+        }
+    }
+
+    // Repousse continuellement le joueur tant qu'il essaie de pousser dans l'ennemi,
+    // pour empêcher de passer à travers en maintenant une touche de direction
+    private void OnTriggerStay2D(Collider2D autre)
+    {
+        if (autre.CompareTag(tagEnnemi))
+        {
+            Vector2 directionRebond = (transform.position - autre.transform.position).normalized;
+            transform.position += (Vector3)(directionRebond * vitesse * Time.deltaTime);
+        }
     }
 }

@@ -41,6 +41,16 @@ public class Missile : MonoBehaviour
         // Cas 2 : la cible est un ennemi
         if (cible.CompareTag("Enemy"))
         {
+            // Si c'est un boss, il encaisse les dégâts au lieu d'être détruit instantanément
+            // GetComponentInParent au cas où le Collider2D serait sur un objet enfant du boss
+            TankBoss boss = cible.GetComponent<TankBoss>();
+            if (boss != null)
+            {
+                boss.SubirDegats(1);
+                Destroy(gameObject); // Détruit seulement le missile (le boss se détruit lui-même à 0 de vie)
+                return;
+            }
+
             Destroy(cible);
             Destroy(gameObject);
             return;
